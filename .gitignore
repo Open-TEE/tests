@@ -27,3 +27,7 @@
 *.i*86
 *.x86_64
 *.hex
+
+# Python stuff
+*.pyc
+__pycache__
