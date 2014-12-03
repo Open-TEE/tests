@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fafc7978_697e42b0",
+        "filename": "configure.ac",
+        "patchSetId": 1
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2014-12-03T17:50:02Z",
+      "side": 1,
+      "message": "from here",
+      "range": {
+        "startLine": 19,
+        "startChar": 0,
+        "endLine": 19,
+        "endChar": 16
+      },
+      "revId": "756fe8defafdbce6219ae88c35c19755dc8532a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_c94ace82",
+        "filename": "configure.ac",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2014-12-03T17:50:02Z",
+      "side": 1,
+      "message": "to here, libc - is this really necessary",
+      "range": {
+        "startLine": 27,
+        "startChar": 0,
+        "endLine": 27,
+        "endChar": 14
+      },
+      "revId": "756fe8defafdbce6219ae88c35c19755dc8532a0",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
