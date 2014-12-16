@@ -28,7 +28,6 @@ from urllib2 import urlopen, URLError, HTTPError
 from urlparse import urlparse
 from binascii import unhexlify
 import os
-import getopt
 import ConfigParser
 import zipfile
 from subprocess import CalledProcessError, check_call
@@ -37,7 +36,7 @@ import ntpath
 from shutil import rmtree
 
 WINDOWS_LINE_ENDING = "\r\n"
-
+CA_NAME = "./crypto_tester_ca"
 tempDir = tempfile.mkdtemp(prefix="SHA")
 config = None
 
@@ -76,7 +75,7 @@ calls cleanExit() if an exception occurs
 def downloadZip(url):
     try:
         zipToDownload = urlopen(url)
-        zipFilename = ntpath.basename(url)
+        zipFilename = os.path.basename(url)
         localZip = tempfile.NamedTemporaryFile(mode='wb', suffix='',
                                                prefix=zipFilename,
                                                dir=tempDir, delete=False)
@@ -85,10 +84,10 @@ def downloadZip(url):
         return localZip.name
     except HTTPError, e:
         print "HTTP Error:", e.code, url
-        cleanExit()
+        raise
     except URLError, e:
         print "URL Error:", e.reason, url
-        cleanExit()
+        raise
 
 '''
 Parses a single .rsp text file from nist.gov
@@ -190,7 +189,8 @@ Calls the external CA process to run our test data
 Returns 0 if the tests were succesful and an errorcode otherwise
 '''
 def run_test_vector(testVectorFileDict):
-    args = [config.get("ParserConfig", "CAName").strip('"'),
+    caPath = os.path.dirname(config.get("ParserConfig", "CAPath").strip('"'))
+    args = [caPath + os.sep + CA_NAME,
             "-i" + testVectorFileDict['inputFile'],
             "-l" + testVectorFileDict['lengthFile'],
             "-e" + testVectorFileDict['expectedOutputFile'],
@@ -200,6 +200,9 @@ def run_test_vector(testVectorFileDict):
         return 0
     except CalledProcessError as e:
         return e.returncode
+    except OSError:
+	print "ClientApplication not found in: " + caPath
+	raise
 
 '''
 Goes through all the arguments given by user
@@ -282,5 +285,7 @@ if __name__=='__main__':
                     print "SUCCESFULLY TESTED!"
                 else:
                     print "FAILED! Return code: " + str(returnCode)
+    except:
+	print "Exiting due to an exception: ", sys.exc_info()[0]
     finally:
         cleanExit()
