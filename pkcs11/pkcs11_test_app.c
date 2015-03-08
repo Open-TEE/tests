@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static CK_FUNCTION_LIST_PTR func_list;
 
@@ -263,11 +264,11 @@ static void rsa_sign_ver(CK_SESSION_HANDLE session)
 		{CKA_ALLOWED_MECHANISMS, &allow_mech, sizeof(allow_mech)}
 	};
 
-        ret = func_list->C_CreateObject(session, pri_attrs, attr_count, &pri_Key);
-	if (ret != CKR_OK) {
-		printf("Failed to create RSA private object: %lu : 0x%x\n", ret, (uint32_t)ret);
-		exit(4);
-	}
+//        ret = func_list->C_CreateObject(session, pri_attrs, attr_count, &pri_Key);
+//	if (ret != CKR_OK) {
+//		printf("Failed to create RSA private object: %lu : 0x%x\n", ret, (uint32_t)ret);
+//		exit(4);
+//	}
 
         /* Create Public key object */
 	attr_count = 6;
@@ -280,17 +281,17 @@ static void rsa_sign_ver(CK_SESSION_HANDLE session)
                 {CKA_ALLOWED_MECHANISMS, &allow_mech, sizeof(allow_mech)}
         };
 
-        ret = func_list->C_CreateObject(session, pub_attrs, attr_count, &pub_Key);
-        if (ret != CKR_OK) {
-                printf("Failed to create RSA public object: %lu : 0x%x\n", ret, (uint32_t)ret);
-                exit(4);
-        }
+//        ret = func_list->C_CreateObject(session, pub_attrs, attr_count, &pub_Key);
+//        if (ret != CKR_OK) {
+//                printf("Failed to create RSA public object: %lu : 0x%x\n", ret, (uint32_t)ret);
+//                exit(4);
+//        }
 
-        ret = func_list->C_SignInit(session, &mechanism, pri_Key);
-	if (ret != CKR_OK) {
-		printf("Failed to signature init: %lu : 0x%x\n", ret, (uint32_t)ret);
-		exit(4);
-	}
+//        ret = func_list->C_SignInit(session, &mechanism, pri_Key);
+//	if (ret != CKR_OK) {
+//		printf("Failed to signature init: %lu : 0x%x\n", ret, (uint32_t)ret);
+//		exit(4);
+//	}
 
 	ret = func_list->C_Sign(session, (CK_BYTE_PTR)msg, msg_len, (CK_BYTE_PTR)sig, &sig_len);
 	if (ret != CKR_OK) {
@@ -303,6 +304,10 @@ static void rsa_sign_ver(CK_SESSION_HANDLE session)
 		exit(4);
 	}
 
+	for (i = 0; i < sig_len; i++)
+		printf("%02x", ((unsigned char *)sig)[i]);
+
+	printf("\n");
 	if (memcmp(know_result, sig, sig_len) != 0) {
 
 		printf("RSA: Not expected signature\n");
@@ -311,11 +316,11 @@ static void rsa_sign_ver(CK_SESSION_HANDLE session)
 		printf("RSA: Signature OK\n");
 	}
 
-	ret = func_list->C_VerifyInit(session, &mechanism, pub_Key);
-	if (ret != CKR_OK) {
-		printf("Failed to verify init: %lu : 0x%x\n", ret, (uint32_t)ret);
-		exit(4);
-	}
+//	ret = func_list->C_VerifyInit(session, &mechanism, pub_Key);
+//	if (ret != CKR_OK) {
+//		printf("Failed to verify init: %lu : 0x%x\n", ret, (uint32_t)ret);
+//		exit(4);
+//	}
 
 	ret = func_list->C_Verify(session, (CK_BYTE_PTR)msg, msg_len, (CK_BYTE_PTR)sig, sig_len);
 	if (ret == CKR_OK) {
@@ -355,35 +360,54 @@ int main()
 	printf("Version : Major %d: Minor %d\n",
 	       info.cryptokiVersion.major, info.cryptokiVersion.minor);
 
-	ret = func_list->C_OpenSession(1, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL, NULL, &session);
-	if (ret != CKR_OK) {
-		printf("Failed to Open session the library: 0x%x\n", (uint32_t)ret);
-		exit(4);
-	}
+		printf("Before login\n");
+sync();
+session = 99;
+//	ret = func_list->C_OpenSession(1, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL, NULL, &session);
+//	if (ret != CKR_OK) {
+//		printf("Failed to Open session the library: 0x%x\n", (uint32_t)ret);
+//		exit(4);
+//	}
 
-	ret = func_list->C_Login(session, CKU_USER, (CK_BYTE_PTR)pin, 4);
-	if (ret != CKR_OK) {
-		printf("Failed to login: 0x%x\n", (uint32_t)ret);
-		exit(4);
-	}
-
-	aes_test(session);
-	rsa_keygen(session);
+//	printf("Before login session %ld\n", session);
+//sync();
+//	ret = func_list->C_Login(session, CKU_USER, (CK_BYTE_PTR)pin, 4);
+//	if (ret != CKR_OK) {
+//		printf("Failed to login here: 0x%x\n", (uint32_t)ret);
+//		exit(4);
+//	}
+//sync();
+//		printf("Before aes\n");
+//sync();
+////	aes_test(session);
+//		printf("Before rsa\n");
+//sync();
+////	rsa_keygen(session);
+//		printf("Before sign\n");
+sync();
 	rsa_sign_ver(session);
+		printf("Before logout\n");
+sync();
 
-	ret = func_list->C_Logout(session);
-	if (ret != CKR_OK) {
-		printf("Failed to logout: 0x%x\n", (uint32_t)ret);
-		exit(4);
-	}
+//	ret = func_list->C_Logout(session);
+//	if (ret != CKR_OK) {
+//		printf("Failed to logout: 0x%x\n", (uint32_t)ret);
+//		exit(4);
+//	}
 
-	func_list->C_CloseSession(session);
-
+//	sync();
+//	printf("Before closesession\n");
+//sync();
+//	func_list->C_CloseSession(session);
+//sync();
+//	printf("Before Finalize\n");
+//sync();
 	ret = func_list->C_Finalize(NULL);
 	if (ret != CKR_OK) {
 		printf("Failed to Finalize the library: %ld\n", ret);
 		exit(4);
 	}
-
+sync();
+	printf("Before return\n");
 	return 0;
 }
