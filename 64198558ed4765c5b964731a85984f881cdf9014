@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a106d94_f67d01b3",
+        "filename": "pkcs11/pkcs11_test_app.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 274,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2015-03-24T13:37:22Z",
+      "side": 1,
+      "message": "why return 0 if the test fails ?",
+      "range": {
+        "startLine": 274,
+        "startChar": 9,
+        "endLine": 274,
+        "endChar": 10
+      },
+      "revId": "64198558ed4765c5b964731a85984f881cdf9014",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
