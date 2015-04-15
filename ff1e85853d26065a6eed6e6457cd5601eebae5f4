@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a106d94_c919f17a",
+        "filename": "pkcs11/pkcs11_test_app.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 840,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2015-04-15T12:20:48Z",
+      "side": 1,
+      "message": "are these not set by default by your other patch?",
+      "range": {
+        "startLine": 840,
+        "startChar": 0,
+        "endLine": 840,
+        "endChar": 29
+      },
+      "revId": "ff1e85853d26065a6eed6e6457cd5601eebae5f4",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
