@@ -944,6 +944,13 @@ static void create_objects(CK_SESSION_HANDLE session)
 		return;
 	}
 
+	/* Public object can be created without login */
+	ret = func_list->C_Logout(session);
+	if (ret != CKR_OK) {
+		PRI_FAIL("Failed to logout: 0x%x", (uint32_t)ret);
+		return;
+	}
+
 	/* RSA Public key object */
 	obj_class = CKO_PUBLIC_KEY;
 	CK_ATTRIBUTE pub_attrs[6] = {
@@ -975,7 +982,19 @@ static void create_objects(CK_SESSION_HANDLE session)
 	};
 
 	ret = func_list->C_CreateObject(session, hmac256, 6, &hmac_256_obj);
+	if (ret == CKR_OK) {
+		PRI_FAIL("Should fail, because session is not logged in");
+		return;
+	}
+
+	ret = func_list->C_Login(session, CKU_USER, (CK_BYTE_PTR)user_pin, sizeof(user_pin));
 	if (ret != CKR_OK) {
+		PRI_ABORT("Failed to login: 0x%x", (uint32_t)ret);
+		exit(1);
+	}
+
+	ret = func_list->C_CreateObject(session, hmac256, 6, &hmac_256_obj);
+	if (ret == CKR_OK) {
 		PRI_FAIL("Failed to create HMACsha256 object: %lu : 0x%x", ret, (uint32_t)ret);
 		return;
 	}
@@ -1262,6 +1281,40 @@ static void crypto_using_not_allowed_key(CK_SESSION_HANDLE session)
 	if (ret == CKR_OK) {
 		PRI_FAIL("Key should not be able to use for encrypt");
 		return;
+	}
+
+	/* Logout and use RSA keys */
+	ret = func_list->C_Logout(session);
+	if (ret != CKR_OK) {
+		PRI_FAIL("Failed to logout: 0x%x", (uint32_t)ret);
+		return;
+	}
+
+	mechanism.mechanism = CKM_SHA1_RSA_PKCS;
+	mechanism.pParameter = NULL_PTR;
+	mechanism.ulParameterLen = 0;
+	ret = func_list->C_SignInit(session, &mechanism, rsa_private_obj);
+	if (ret == CKR_OK) {
+		PRI_FAIL("Private should not be availible if session logget out!");
+		return;
+	}
+
+	ret = func_list->C_VerifyInit(session, &mechanism, rsa_public_obj);
+	if (ret != CKR_OK) {
+		PRI_FAIL("VerifyInit: %lu : 0x%x", ret, (uint32_t)ret);
+		return;
+	}
+
+	ret = func_list->C_VerifyFinal(session, NULL, 0);
+	if (ret != CKR_OK) {
+		PRI_FAIL("VerifyFinal: %lu : 0x%x", ret, (uint32_t)ret);
+		return;
+	}
+
+	ret = func_list->C_Login(session, CKU_USER, (CK_BYTE_PTR)user_pin, sizeof(user_pin));
+	if (ret != CKR_OK) {
+		PRI_ABORT("Failed to login: 0x%x", (uint32_t)ret);
+		exit(1);
 	}
 
 	PRI_OK("-");
