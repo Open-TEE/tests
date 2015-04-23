@@ -230,6 +230,24 @@ static void encrypt_and_decrypt(CK_SESSION_HANDLE session,
 		goto out;
 	}
 
+	/* Get size */
+	ret = func_list->C_Encrypt(session, NULL, 0, NULL, &cipher_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : Encrypt() getting size: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
+		goto out;
+	}
+
+	if (cipher_len != expected_cipher_len) {
+		PRI_FAIL("%s : Getting invalid encrypt output size", mech_type);
+		goto out;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_Encrypt(session, NULL, 0, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_Encrypt() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
+	/* Do the encryption */
 	ret = func_list->C_Encrypt(session, (CK_BYTE_PTR)msg, msg_len,
 				   (CK_BYTE_PTR)cipher, &cipher_len);
 	if (ret != CKR_OK) {
@@ -247,12 +265,34 @@ static void encrypt_and_decrypt(CK_SESSION_HANDLE session,
 		goto out;
 	}
 
+
+	/* DECRYPTION*/
+
 	ret = func_list->C_DecryptInit(session, mechanism, decrypt_key);
 	if (ret != CKR_OK) {
 		PRI_FAIL("%s : DecryptInit(): %lu : 0x%x", mech_type, ret, (uint32_t)ret);
 		goto out;
 	}
 
+	/* Get size */
+	ret = func_list->C_Decrypt(session, NULL, 0, NULL, &decrypted_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_Decrypt() getting size: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
+		goto out;
+	}
+
+	if (decrypted_len != msg_len) {
+		PRI_FAIL("%s : Getting invalid decrypt output size", mech_type);
+		goto out;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_Decrypt(session, NULL, 0, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_Decrypt() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
+
+	/* Do the decryption */
 	ret = func_list->C_Decrypt(session, (CK_BYTE_PTR)cipher, cipher_len,
 				   (CK_BYTE_PTR)decrypted, &decrypted_len);
 	if (ret != CKR_OK) {
@@ -332,6 +372,24 @@ static void sign_and_verify(CK_SESSION_HANDLE session,
 		return;
 	}
 
+	/* Get size */
+	ret = func_list->C_Sign(session, NULL, 0, NULL, &sig_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_Sign() getting size: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
+		return;
+	}
+
+	if (sig_len != expected_sig_len) {
+		PRI_FAIL("%s : Getting invalid sign output size", mech_type);
+		return;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_Sign(session, NULL, 0, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_Sign() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
+
 	ret = func_list->C_Sign(session, msg, msg_len, (CK_BYTE_PTR)sig, &sig_len);
 	if (ret != CKR_OK) {
 		PRI_FAIL("%s : Sign: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
@@ -355,6 +413,12 @@ static void sign_and_verify(CK_SESSION_HANDLE session,
 		PRI_FAIL("%s : Verify init: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
 		return;
 	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_Verify(session, NULL, 0, NULL, 0);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_Verify() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
 
 	ret = func_list->C_Verify(session, msg, msg_len, (CK_BYTE_PTR)sig, sig_len);
 	if (ret == CKR_OK) {
@@ -430,6 +494,23 @@ static void sign_and_verify_with_update(CK_SESSION_HANDLE session,
 		}
 	}
 
+	/* Get size */
+	ret = func_list->C_SignFinal(session, NULL, &sig_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_SignFinal() getting size: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
+		return;
+	}
+
+	if (expected_sig_len != sig_len) {
+		PRI_FAIL("%s : Getting invalid sign output size", mech_type);
+		return;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_SignFinal(session, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_SignFinal() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
 	ret = func_list->C_SignFinal(session, (CK_BYTE_PTR)sig, &sig_len);
 	if (ret != CKR_OK) {
 		PRI_FAIL("%s : signFinal: %lu : 0x%x", mech_type, ret, (uint32_t)ret);
@@ -459,6 +540,11 @@ static void sign_and_verify_with_update(CK_SESSION_HANDLE session,
 		}
 	}
 
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_VerifyFinal(session, NULL, 0);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_VerifyFinal() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
 	ret = func_list->C_VerifyFinal(session, (CK_BYTE_PTR)sig, sig_len);
 	if (ret == CKR_OK) {
 		PRI_OK("%s : Verified OK", mech_type);
@@ -466,6 +552,134 @@ static void sign_and_verify_with_update(CK_SESSION_HANDLE session,
 		PRI_FAIL("%s :Invalid signature", mech_type);
 	} else {
 		PRI_FAIL("%s : Verify : %lu : 0x%x", mech_type, ret, (uint32_t)ret);
+	}
+}
+
+static void hash(CK_SESSION_HANDLE session,
+		 CK_MECHANISM *mechanism)
+{
+	CK_BYTE_PTR msg, expected_hash;
+	CK_ULONG hash_len = 0, msg_len = 0, expected_hash_len = 0, biggest_hash_len = 64; /*sha512*/
+	char hash[biggest_hash_len]; /* Avoiding malloc. Reserving enough big buffer for all hash */
+	char *mech_type;
+	CK_RV ret;
+
+	/* Signature bufffer */
+	if (mechanism->mechanism == CKM_SHA256) {
+		expected_hash = sha256hash;
+		expected_hash_len = SIZE_OF_VEC(sha256hash);
+		msg = sha256msg;
+		msg_len = SIZE_OF_VEC(sha256msg);
+		mech_type = "CKM_SHA256";
+
+	} else {
+		PRI_FAIL("Mechanism unknow");
+		return;
+	}
+
+	ret = func_list->C_DigestInit(session, mechanism);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_DigestInit() %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_Digest(session, NULL, 0, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_Digest() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
+	ret = func_list->C_Digest(session, NULL, 0, NULL, &hash_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_Digest() getting output size %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	if (hash_len != expected_hash_len) {
+		PRI_FAIL("%s : Not expected hash output size", mech_type);
+		return;
+	}
+
+	ret = func_list->C_Digest(session, msg, msg_len, (CK_BYTE_PTR)hash, &hash_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_Digest() %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	if (hash_len != expected_hash_len) {
+		PRI_FAIL("%s : Hash length is invalid", mech_type);
+		return;
+	}
+
+	if (memcmp(hash, expected_hash, expected_hash_len) != 0) {
+		PRI_FAIL("%s : Not expected hash", mech_type);
+	} else {
+		PRI_OK("%s : OK", mech_type);
+	}
+}
+
+static void hash_update(CK_SESSION_HANDLE session,
+			CK_MECHANISM *mechanism)
+{
+	CK_ULONG i, update_loop_count = 2;
+	CK_BYTE_PTR msg;
+	CK_ULONG hash_len = 0, msg_len = 0, expected_hash_len = 0, biggest_hash_len = 64; /*sha512*/
+	char hash[biggest_hash_len]; /* Avoiding malloc. Reserving enough big buffer for all hash */
+	char *mech_type;
+	CK_RV ret;
+
+	/* Signature bufffer */
+	if (mechanism->mechanism == CKM_SHA256) {
+		expected_hash_len = SIZE_OF_VEC(sha256hash);
+		msg = sha256msg;
+		msg_len = SIZE_OF_VEC(sha256msg);
+		mech_type = "CKM_SHA256";
+
+	} else {
+		PRI_FAIL("Mechanism unknow");
+		return;
+	}
+
+	ret = func_list->C_DigestInit(session, mechanism);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_DigestInit() %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	for (i = 0; i < update_loop_count; ++i) {
+
+		ret = func_list->C_DigestUpdate(session, msg, msg_len);
+		if (ret != CKR_OK) {
+			PRI_FAIL("%s : C_DigestUpdate() %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+			return;
+		}
+	}
+
+	ret = func_list->C_DigestFinal(session, NULL, &hash_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_DigestFinal() getting output length %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	/* Extra test: Should not crash the TA */
+	ret = func_list->C_DigestFinal(session, NULL, NULL);
+	if (ret == CKR_OK)
+		PRI_YES("%s : C_DigestFinal() with NULL params %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+
+	if (hash_len != expected_hash_len) {
+		PRI_FAIL("%s : Not expected hash output size", mech_type);
+		return;
+	}
+
+	ret = func_list->C_DigestFinal(session, (CK_CHAR_PTR)hash, &hash_len);
+	if (ret != CKR_OK) {
+		PRI_FAIL("%s : C_DigestFinal() %lu : 0x%x", mech_type, ret, (uint32_t)ret)
+		return;
+	}
+
+	if (hash_len != expected_hash_len) {
+		PRI_FAIL("%s : Hash length is invalid", mech_type);
+	} else {
+		PRI_OK("%s : OK", mech_type);
 	}
 }
 
@@ -749,58 +963,6 @@ static void find_objects(CK_SESSION_HANDLE session)
 
 
 	PRI_OK("Find object test complited (result need to verified manualy)!!");
-}
-
-static void do_hash(CK_SESSION_HANDLE session)
-{
-	CK_MECHANISM mechanism = {CKM_SHA256, NULL_PTR, 0};
-	CK_BYTE digest[SIZE_OF_VEC(sha256hash)];
-	CK_ULONG ulDigestLen = SIZE_OF_VEC(sha256hash);
-	CK_RV ret;
-
-	/* Re-init operation */
-	ulDigestLen = 0;
-	ret = func_list->C_DigestInit(session, &mechanism);
-	if (ret != CKR_OK) {
-		PRI_FAIL("Failed to init digest mechanism %lu : 0x%x", ret, (uint32_t)ret)
-		return;
-	}
-
-	ret = func_list->C_DigestUpdate(session, sha256msg, SIZE_OF_VEC(sha256msg));
-	if (ret != CKR_OK) {
-		PRI_FAIL("Failed to update digest %lu : 0x%x", ret, (uint32_t)ret)
-		return;
-	}
-
-	/* Get sha256 output size */
-	ret = func_list->C_DigestFinal(session, NULL, &ulDigestLen);
-	if (ret != CKR_OK) {
-		PRI_FAIL("Failed to finalize digest %lu : 0x%x", ret, (uint32_t)ret)
-		return;
-	}
-
-	if (ulDigestLen != SIZE_OF_VEC(sha256hash)) {
-		PRI_FAIL("Not expected sha256 size");
-		return;
-	}
-
-	ret = func_list->C_DigestFinal(session, digest, &ulDigestLen);
-	if (ret != CKR_OK) {
-		PRI_FAIL("Failed to finalize digest %lu : 0x%x", ret, (uint32_t)ret)
-		return;
-	}
-
-	if (ulDigestLen != SIZE_OF_VEC(sha256hash)) {
-		PRI_FAIL("Not expected sha256 size");
-		return;
-	}
-
-	if (memcmp(sha256hash, digest, ulDigestLen) != 0) {
-		PRI_FAIL("Not expected hash");
-		return;
-	} else {
-		PRI_OK("-");
-	}
 }
 
 static void aes_test_update(CK_SESSION_HANDLE session)
@@ -1440,6 +1602,16 @@ static void token_object(CK_SESSION_HANDLE session)
 	PRI_OK("-");
 }
 
+static void hash_tests(CK_SESSION_HANDLE session)
+{
+	CK_MECHANISM mechanism = {0, NULL_PTR, 0}; /* Default vals */
+
+	/* sha256 */
+	mechanism.mechanism = CKM_SHA256;
+	hash(session, &mechanism);
+	hash_update(session, &mechanism);
+}
+
 int main()
 {
 	CK_SESSION_HANDLE session;
@@ -1500,9 +1672,9 @@ int main()
 	create_objects(session);
 	encrypt_decrypt_tests(session);
 	sign_and_verify_tests(session);
+	hash_tests(session);
 	get_attr_value(session);
 	find_objects(session);
-	do_hash(session);
 	general_key_attrs_test(session);
 	set_obj_attr(session);
 	set_obj_attr_seccond(session);
