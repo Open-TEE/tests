@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "facab960_f995ed88",
+        "filename": "internal_api/storage_test.c",
+        "patchSetId": 2
+      },
+      "lineNbr": 24,
+      "author": {
+        "id": 1003707
+      },
+      "writtenOn": "2015-05-22T18:57:32Z",
+      "side": 1,
+      "message": "this define was left here in hurry, should be defined in the makefiles, as this is used to select correct API",
+      "revId": "549c1d65ef7b5b28115268d3358f34cdd8266d51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "facab960_79e9dd19",
+        "filename": "pkcs11/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1003707
+      },
+      "writtenOn": "2015-05-22T18:57:32Z",
+      "side": 1,
+      "message": "LOCAL_CFLAGS :\u003d -DTA_STORAGE_TEST",
+      "revId": "549c1d65ef7b5b28115268d3358f34cdd8266d51",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
