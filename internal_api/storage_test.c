@@ -102,7 +102,7 @@ static uint32_t popu_rsa_pub_key()
 	params = (TEE_Attribute *)TEE_Malloc(param_count * sizeof(TEE_Attribute), 0);
 	if (params == NULL) {
 		PRI_FAIL("Out of memory");
-		return;
+		return fn_ret;
 	}
 	params[0].content.ref.buffer = TEE_Malloc(KEY_IN_BYTES(key_size), 0);
 	params[1].content.ref.buffer = TEE_Malloc(KEY_IN_BYTES(key_size), 0);
