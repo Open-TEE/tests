@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fab399f4_6fcaf1a2",
+        "filename": "internal_api/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2015-10-06T15:20:24Z",
+      "side": 1,
+      "message": "is libcrypto not the name of the OpenSSL library",
+      "range": {
+        "startLine": 23,
+        "startChar": 16,
+        "endLine": 23,
+        "endChar": 30
+      },
+      "revId": "da813af1304153843fe25ea9765d99138bb93af7",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
