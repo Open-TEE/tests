@@ -590,6 +590,71 @@ err:
 	return fn_ret;
 }
 
+static uint32_t ECDSA_sig_and_ver()
+{
+	TEE_Result ret;
+	TEE_ObjectHandle ecdsa_keypair = (TEE_ObjectHandle)NULL;
+	TEE_Attribute ecdsa_attrs[1];
+	size_t key_size = 256;
+	uint32_t ecdsa_alg = TEE_ALG_ECDSA_P256;
+	char *dig_msg = "TEST";
+	uint32_t fn_ret = 1; /* Initialized error return */
+	uint32_t curve = TEE_ECC_CURVE_NIST_P256;
+
+
+	uint32_t dig_len = 20;
+	uint32_t sig_len = 256;
+
+	void *dig = NULL;
+	void *sig = NULL;
+
+	PRI_YES("malloc");
+	dig = TEE_Malloc(dig_len, 0);
+	sig = TEE_Malloc(sig_len, 0);
+	if (!dig || !sig) {
+		PRI_FAIL("Out of memory");
+		goto err;
+	}
+
+	TEE_MemMove(dig, dig_msg, 5);
+
+	/* Curve */
+	ecdsa_attrs[0].attributeID = TEE_ATTR_ECC_CURVE;
+	ecdsa_attrs[0].content.value.a = curve;
+	ecdsa_attrs[0].content.value.b = 0;
+
+	ret = TEE_AllocateTransientObject(TEE_TYPE_ECDSA_KEYPAIR, key_size, &ecdsa_keypair);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Failed to alloc transient object handle : 0x%x", ret);
+		goto err;
+	}
+
+	ret = TEE_GenerateKey(ecdsa_keypair, key_size, ecdsa_attrs, 1);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Generate key failure : 0x%x", ret);
+		goto err;
+	}
+
+	if (warp_asym_op(ecdsa_keypair, TEE_MODE_SIGN, ecdsa_alg, ecdsa_attrs, 1,
+			 dig, dig_len, sig, &sig_len))
+		goto err;
+
+	if (warp_asym_op(ecdsa_keypair, TEE_MODE_VERIFY, ecdsa_alg, ecdsa_attrs, 1,
+			 dig, dig_len, sig, &sig_len))
+		goto err;
+
+	fn_ret = 0; /* OK */
+err:
+	TEE_FreeTransientObject(ecdsa_keypair);
+	TEE_Free(dig);
+	TEE_Free(sig);
+
+	if (fn_ret == 0)
+		PRI_OK("-");
+
+	return fn_ret;
+}
+
 static uint32_t RSA_sig_and_ver()
 {
 	TEE_Result ret;
@@ -997,7 +1062,8 @@ uint32_t crypto_test(uint32_t loop_count)
 		    HMAC_computation() ||
 		    set_key_and_rm_and_do_crypto() ||
 		    read_key_and_do_crypto() ||
-                    rsa_sign_nist_sha1_pkcs()) {
+		    rsa_sign_nist_sha1_pkcs() ||
+		    ECDSA_sig_and_ver()) {
                         test_have_fail = 1;
                         break;
                 }
