@@ -23,7 +23,7 @@
 /* Start Open-TEE spesifics. NOT GP Compliant. For debugin sake */
 #include "../include/tee_logging.h"
 #define PRI_STR(str)	    OT_LOG1(LOG_DEBUG, str);
-#define PRI(str, ...)       OT_LOG1(LOG_DEBUG, "%s : " str "\n",  __func__, ##__VA_ARGS__);
+#define PRI (str, ...)       OT_LOG1(LOG_DEBUG, "%s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_OK(str, ...)    OT_LOG1(LOG_DEBUG, " [OK] : %s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_YES(str, ...)   OT_LOG1(LOG_DEBUG, " YES? : %s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_FAIL(str, ...)  OT_LOG1(LOG_DEBUG, "FAIL  : %s : " str "\n",  __func__, ##__VA_ARGS__);
@@ -256,7 +256,7 @@ static int warp_sym_op(TEE_ObjectHandle key,
 	uint32_t total_write_bytes = 0;
 	TEE_ObjectInfo info;
 
-	TEE_GetObjectInfo(key, &info);
+	TEE_GetObjectInfo1(key, &info);
 
 	ret = TEE_AllocateOperation(&handle, alg, mode, info.maxObjectSize);
 	if (ret != TEE_SUCCESS) {
@@ -454,7 +454,7 @@ static int warp_asym_op(TEE_ObjectHandle key,
 	TEE_OperationHandle handle = (TEE_OperationHandle)NULL;
 	TEE_ObjectInfo info;
 
-	TEE_GetObjectInfo(key, &info);
+	TEE_GetObjectInfo1(key, &info);
 
 	ret = TEE_AllocateOperation(&handle, alg, mode, info.maxObjectSize);
 	if (ret != TEE_SUCCESS) {
@@ -1141,7 +1141,7 @@ static uint32_t read_key_and_do_crypto()
 	fn_ret = 0; /* OK */
 err:
 	TEE_FreeTransientObject(rsa_keypair);
-	TEE_CloseAndDeletePersistentObject(persisten_rsa_keypair);
+	TEE_CloseAndDeletePersistentObject1(persisten_rsa_keypair);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
