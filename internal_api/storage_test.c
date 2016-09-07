@@ -23,7 +23,7 @@
 /* Start Open-TEE spesifics. NOT GP Compliant. For debugin sake */
 #include "../include/tee_logging.h"
 #define PRI_STR(str)	    OT_LOG1(LOG_DEBUG, str);
-#define PRI(str, ...)       OT_LOG1(LOG_DEBUG, "%s : " str "\n",  __func__, ##__VA_ARGS__);
+#define PRI (str, ...)       OT_LOG1(LOG_DEBUG, "%s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_OK(str, ...)    OT_LOG1(LOG_DEBUG, " [OK] : %s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_YES(str, ...)   OT_LOG1(LOG_DEBUG, " YES? : %s : " str "\n",  __func__, ##__VA_ARGS__);
 #define PRI_FAIL(str, ...)  OT_LOG1(LOG_DEBUG, "FAIL  : %s : " str "\n",  __func__, ##__VA_ARGS__);
@@ -31,6 +31,237 @@
 /* Start Open-TEE spesifics. */
 
 #define KEY_IN_BYTES(key_in_bits) ((key_in_bits + 7) / 8)
+#define SIZE_OF_VEC(vec) (sizeof(vec) - 1)
+
+/* RSA (NIST) */
+uint8_t modulus[] = "\xa8\xd6\x8a\xcd\x41\x3c\x5e\x19\x5d\x5e\xf0\x4e\x1b\x4f\xaa\xf2"
+		    "\x42\x36\x5c\xb4\x50\x19\x67\x55\xe9\x2e\x12\x15\xba\x59\x80\x2a"
+		    "\xaf\xba\xdb\xf2\x56\x4d\xd5\x50\x95\x6a\xbb\x54\xf8\xb1\xc9\x17"
+		    "\x84\x4e\x5f\x36\x19\x5d\x10\x88\xc6\x00\xe0\x7c\xad\xa5\xc0\x80"
+		    "\xed\xe6\x79\xf5\x0b\x3d\xe3\x2c\xf4\x02\x6e\x51\x45\x42\x49\x5c"
+		    "\x54\xb1\x90\x37\x68\x79\x1a\xae\x9e\x36\xf0\x82\xcd\x38\xe9\x41"
+		    "\xad\xa8\x9b\xae\xca\xda\x61\xab\x0d\xd3\x7a\xd5\x36\xbc\xb0\xa0"
+		    "\x94\x62\x71\x59\x48\x36\xe9\x2a\xb5\x51\x73\x01\xd4\x51\x76\xb5";
+
+uint8_t public_exp[] = "\x00\x00\x00\x03";
+
+uint8_t private_exp[] = "\x1c\x23\xc1\xcc\xe0\x34\xba\x59\x8f\x8f\xd2\xb7\xaf\x37\xf1\xd3"
+			"\x0b\x09\x0f\x73\x62\xae\xe6\x8e\x51\x87\xad\xae\x49\xb9\x95\x5c"
+			"\x72\x9f\x24\xa8\x63\xb7\xa3\x8d\x6e\x3c\x74\x8e\x29\x72\xf6\xd9"
+			"\x40\xb7\xba\x89\x04\x3a\x2d\x6c\x21\x00\x25\x6a\x1c\xf0\xf5\x6a"
+			"\x8c\xd3\x5f\xc6\xee\x20\x52\x44\x87\x66\x42\xf6\xf9\xc3\x82\x0a"
+			"\x3d\x9d\x2c\x89\x21\xdf\x7d\x82\xaa\xad\xca\xf2\xd7\x33\x4d\x39"
+			"\x89\x31\xdd\xbb\xa5\x53\x19\x0b\x3a\x41\x60\x99\xf3\xaa\x07\xfd"
+			"\x5b\x26\x21\x46\x45\xa8\x28\x41\x9e\x12\x2c\xfb\x85\x7a\xd7\x3b";
+
+static TEE_Result verify_obj_params(TEE_ObjectHandle object,
+				    TEE_Attribute *params,
+				    uint32_t params_count)
+{
+	/* NOTE: Only for reference attributes!!
+	 * NOTE2: Cant verify if object attribute count is same as fn params count */
+
+	uint32_t obj_attr_len = 0, i = 0;
+	void *obj_attr = NULL;
+	TEE_Result gp_rv = TEE_SUCCESS;
+
+	for (i = 0; i < params_count; ++i) {
+		gp_rv = TEE_GetObjectBufferAttribute(object,
+						     params[i].attributeID, NULL, &obj_attr_len);
+		if (gp_rv != TEE_ERROR_SHORT_BUFFER) {
+			PRI_FAIL("Expected buffer size");
+			goto err;
+		}
+
+		obj_attr = TEE_Malloc(obj_attr_len, 0);
+		if (obj_attr == NULL) {
+			PRI_FAIL("TEE_Malloc failed");
+			gp_rv = TEE_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		gp_rv = TEE_GetObjectBufferAttribute(object, 123456789, obj_attr, &obj_attr_len);
+		if (gp_rv != TEE_ERROR_ITEM_NOT_FOUND) {
+			PRI_FAIL("Attribute should not be found, dummy ID");
+			goto err;
+		}
+
+		gp_rv = TEE_GetObjectBufferAttribute(object, params[i].attributeID,
+						     obj_attr, &obj_attr_len);
+		if (gp_rv != TEE_SUCCESS) {
+			PRI_FAIL("Something is wrong");
+			goto err;
+		}
+
+		/* Verify attribute */
+		if (params[i].content.ref.length != obj_attr_len) {
+			PRI_FAIL("Attribute length is wrong");
+			gp_rv = TEE_ERROR_BAD_STATE;
+			goto err;
+		}
+
+		if (TEE_MemCompare(params[i].content.ref.buffer, obj_attr, obj_attr_len)) {
+			PRI_FAIL("Attribute buffer data is wrong");
+			gp_rv = TEE_ERROR_BAD_STATE;
+			goto err;
+		}
+
+		/* Reset buffer */
+		TEE_Free(obj_attr);
+		obj_attr = NULL;
+		obj_attr_len = 0;
+	}
+
+err:
+	TEE_Free(obj_attr);
+	return gp_rv;
+}
+
+static uint32_t copy_transient_object()
+{
+	TEE_ObjectHandle transient_rsa_key = NULL, cpy_transient_rsa_object = NULL;
+	uint32_t rsa_size = 1024, param_count = 3, cpy_rsa_size = rsa_size * 2;
+	TEE_Attribute params[3] = {0};
+	TEE_Result ret = TEE_SUCCESS;
+	TEE_ObjectInfo info = {0};
+
+	TEE_InitRefAttribute(&params[0], TEE_ATTR_RSA_MODULUS, modulus, SIZE_OF_VEC(modulus));
+	TEE_InitRefAttribute(&params[1], TEE_ATTR_RSA_PUBLIC_EXPONENT,public_exp, SIZE_OF_VEC(public_exp));
+	TEE_InitRefAttribute(&params[2], TEE_ATTR_RSA_PRIVATE_EXPONENT, private_exp, SIZE_OF_VEC(private_exp));
+
+	ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, rsa_size, &transient_rsa_key);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Transied object alloc failed : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = TEE_PopulateTransientObject(transient_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("RSA public key population failed : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = verify_obj_params(transient_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Problems with Transient object attributes : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, cpy_rsa_size,
+					  &cpy_transient_rsa_object);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Transied object alloc failed : 0x%x", ret);
+		goto err_2;
+	}
+
+	TEE_CopyObjectAttributes1(cpy_transient_rsa_object, transient_rsa_key);
+
+	ret = verify_obj_params(cpy_transient_rsa_object, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Problems with copied object attributes : 0x%x", ret);
+		goto err_2;
+	}
+
+	TEE_GetObjectInfo1(cpy_transient_rsa_object, &info);
+
+	if (info.maxObjectSize != cpy_rsa_size) {
+		PRI_FAIL("Copied object max size is wrong");
+		ret = TEE_ERROR_BAD_STATE;
+		goto err_2;
+	}
+
+	if (info.keySize != rsa_size) {
+		PRI_FAIL("Copied object key size is wrong");
+		ret = TEE_ERROR_BAD_STATE;
+		goto err_2;
+	}
+
+	if (!(info.handleFlags & TEE_HANDLE_FLAG_INITIALIZED)) {
+		PRI_FAIL("Copied object should be initialized");
+		ret = TEE_ERROR_BAD_STATE;
+		goto err_2;
+	}
+
+err_2:
+	TEE_FreeTransientObject(cpy_transient_rsa_object);
+err_1:
+	TEE_FreeTransientObject(transient_rsa_key);
+	return ret;
+}
+
+static uint32_t create_and_open_verify_attrs()
+{
+	uint8_t objID[] = "\x89\x31\xdd\xbb\xa5\x53\x19\x0b\x3a\x41\x60\x99\xf3\xaa\x07\xfd";
+	uint8_t data[] = "\x5b\x26\x21\x46\x45\xa8\x28\x41\x9e\x12\x2c\xfb\x85\x7a\xd7\x3b";
+	TEE_Attribute params[3] = {0};
+	uint32_t rsa_size = 1024, param_count = 3;
+	TEE_ObjectHandle transient_rsa_key = NULL, persist_rsa_key = NULL,
+			open_persist_rsa_key = NULL;
+	uint32_t flags = TEE_DATA_FLAG_ACCESS_WRITE |
+			 TEE_DATA_FLAG_ACCESS_WRITE_META | TEE_DATA_FLAG_OVERWRITE;
+	TEE_Result ret = TEE_SUCCESS;
+
+	TEE_InitRefAttribute(&params[0], TEE_ATTR_RSA_MODULUS, modulus, SIZE_OF_VEC(modulus));
+	TEE_InitRefAttribute(&params[1], TEE_ATTR_RSA_PUBLIC_EXPONENT, public_exp, SIZE_OF_VEC(public_exp));
+	TEE_InitRefAttribute(&params[2], TEE_ATTR_RSA_PRIVATE_EXPONENT, private_exp, SIZE_OF_VEC(private_exp));
+
+	ret = TEE_AllocateTransientObject(TEE_TYPE_RSA_KEYPAIR, rsa_size, &transient_rsa_key);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Transied object alloc failed : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = TEE_PopulateTransientObject(transient_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("RSA public key population failed : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = verify_obj_params(transient_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Problems with Transient object attributes : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE, (void *)objID, SIZE_OF_VEC(objID),
+					 flags, transient_rsa_key,
+					 data, SIZE_OF_VEC(data),
+					 &persist_rsa_key);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Create persisten object failed : 0x%x", ret);
+		goto err_1;
+	}
+
+	ret = verify_obj_params(persist_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Problems with Created persistent object attributes : 0x%x", ret);
+		goto err_2;
+	}
+
+	TEE_CloseObject(persist_rsa_key);
+	persist_rsa_key = NULL;
+
+	ret = TEE_OpenPersistentObject(TEE_STORAGE_PRIVATE, (void *)objID, SIZE_OF_VEC(objID),
+				       flags, &open_persist_rsa_key);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Open failed : 0x%x", ret);
+		goto err_2;
+	}
+
+	ret = verify_obj_params(open_persist_rsa_key, params, param_count);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("Problems with Opened persistent object attributes : 0x%x", ret);
+		goto err_3;
+	}
+
+err_3:
+	TEE_CloseAndDeletePersistentObject1(open_persist_rsa_key);
+err_2:
+	TEE_CloseObject(persist_rsa_key);
+err_1:
+	TEE_FreeTransientObject(transient_rsa_key);
+	return ret;
+}
 
 static uint32_t gen_rsa_key_pair_and_save_read()
 {
@@ -80,7 +311,7 @@ static uint32_t gen_rsa_key_pair_and_save_read()
 
 err:
 	TEE_FreeTransientObject(handler);
-	TEE_CloseAndDeletePersistentObject(handler2);
+	TEE_CloseAndDeletePersistentObject1(handler2);
 	TEE_Free(data);
 
 	if (fn_ret == 0)
@@ -259,7 +490,7 @@ static uint32_t rename_per_obj_and_enum_and_open_renameObj()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(object);
+	TEE_CloseAndDeletePersistentObject1(object);
 	TEE_FreePersistentObjectEnumerator(iter_enum);
 
 	if (fn_ret == 0)
@@ -378,7 +609,7 @@ static uint32_t data_stream_write_read()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(per_han, &info);
+	TEE_GetObjectInfo1(per_han, &info);
 	if (info.dataSize != write_data_len) {
 		PRI_FAIL("Object data size is not matching");
 		goto err;
@@ -392,7 +623,7 @@ static uint32_t data_stream_write_read()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(per_han);
+	TEE_CloseAndDeletePersistentObject1(per_han);
 	TEE_CloseObject(key);
 
 	if (fn_ret == 0)
@@ -428,7 +659,7 @@ static uint32_t object_data_size()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(handler, &info);
+	TEE_GetObjectInfo1(handler, &info);
 
 	if (info.dataSize != data_len) {
 		PRI_FAIL("Data size is not correct");
@@ -438,7 +669,7 @@ static uint32_t object_data_size()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(handler);
+	TEE_CloseAndDeletePersistentObject1(handler);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
@@ -469,7 +700,7 @@ static uint32_t multiple_writes()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != 0) {
 		PRI_FAIL("Object data size should be zero");
@@ -489,7 +720,7 @@ static uint32_t multiple_writes()
 		}
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len * write_count) {
 		PRI_FAIL("Object data size is not matching");
@@ -518,7 +749,7 @@ static uint32_t multiple_writes()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len * write_count) {
 		PRI_FAIL("Object data size is not matching (second)");
@@ -536,7 +767,7 @@ static uint32_t multiple_writes()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataPosition != write_data_len + write_data_len + 25) {
 		PRI_FAIL("Incorrect position (third)");
@@ -557,7 +788,7 @@ static uint32_t multiple_writes()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(object);
+	TEE_CloseAndDeletePersistentObject1(object);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
@@ -617,7 +848,7 @@ static uint32_t persisten_object_write_and_read()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len * write_count) {
 		PRI_FAIL("Object data size is not matching");
@@ -640,7 +871,7 @@ static uint32_t persisten_object_write_and_read()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len * write_count) {
 		PRI_FAIL("Object data size is not matching (second)");
@@ -664,7 +895,7 @@ static uint32_t persisten_object_write_and_read()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len * write_count) {
 		PRI_FAIL("Object data size is not matching (third)");
@@ -679,7 +910,7 @@ static uint32_t persisten_object_write_and_read()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(object);
+	TEE_CloseAndDeletePersistentObject1(object);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
@@ -718,7 +949,7 @@ static uint32_t persisten_object_init_data()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len) {
 		PRI_FAIL("Object init size is not correct after open");
@@ -762,7 +993,7 @@ static uint32_t persisten_object_init_data()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != write_data_len) {
 		PRI_FAIL("Object size is not correct after open (second)");
@@ -783,7 +1014,7 @@ static uint32_t persisten_object_init_data()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(object);
+	TEE_CloseAndDeletePersistentObject1(object);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
@@ -835,7 +1066,7 @@ static uint32_t overwrite_persisten()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != sizeof(counter)) {
 		PRI_FAIL("Object init size is not correct after open");
@@ -877,7 +1108,7 @@ static uint32_t overwrite_persisten()
 		goto err;
 	}
 
-	TEE_GetObjectInfo(object, &info);
+	TEE_GetObjectInfo1(object, &info);
 
 	if (info.dataSize != sizeof(counter)) {
 		PRI_FAIL("Object size is not correct after open (second)");
@@ -898,7 +1129,7 @@ static uint32_t overwrite_persisten()
 	fn_ret = 0; /* OK */
 
 err:
-	TEE_CloseAndDeletePersistentObject(object);
+	TEE_CloseAndDeletePersistentObject1(object);
 
 	if (fn_ret == 0)
 		PRI_OK("-");
@@ -916,7 +1147,9 @@ uint32_t storage_test(uint32_t loop_count)
 
 	for (i = 0; i < loop_count; ++i) {
 
-		if (gen_rsa_key_pair_and_save_read() ||
+		if (copy_transient_object() ||
+		    create_and_open_verify_attrs() ||
+		    gen_rsa_key_pair_and_save_read() ||
 		    popu_rsa_pub_key() ||
 		    rename_per_obj_and_enum_and_open_renameObj() ||
 		    data_stream_write_read() ||
