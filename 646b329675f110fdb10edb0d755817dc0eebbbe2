@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a9ab7d09_a38fdc66",
+        "filename": "internal_api/ta2ta_test.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 32,
+      "author": {
+        "id": 1000797
+      },
+      "writtenOn": "2022-02-04T05:54:56Z",
+      "side": 1,
+      "message": "interesting, what is autotools complaining about ?",
+      "range": {
+        "startLine": 32,
+        "startChar": 8,
+        "endLine": 32,
+        "endChar": 17
+      },
+      "revId": "646b329675f110fdb10edb0d755817dc0eebbbe2",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735"
+    }
+  ]
+}
