@@ -1363,12 +1363,11 @@ static uint32_t run_ecdsa_tests()
 	return 0;	
 }
 
-static uint32_t RSA_sig_and_ver()
+static uint32_t RSA_sig_and_ver_algos(uint32_t rsa_alg)
 {
 	TEE_Result ret;
 	TEE_ObjectHandle rsa_keypair = (TEE_ObjectHandle)NULL;
 	size_t key_size = 512;
-	uint32_t rsa_alg = TEE_ALG_RSASSA_PKCS1_V1_5_SHA1;
 	char *dig_msg = "TEST";
 	uint32_t fn_ret = 1; /* Initialized error return */
 
@@ -1417,6 +1416,17 @@ err:
 		PRI_OK("-");
 
 	return fn_ret;
+}
+
+static uint32_t RSA_sig_and_ver()
+{
+	// run the tests for all the algorithms
+	if (RSA_sig_and_ver_algos(TEE_ALG_RSASSA_PKCS1_V1_5_SHA1) ||
+	    RSA_sig_and_ver_algos(TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA1))
+		return 1;
+
+	PRI_OK("-");
+	return 0;
 }
 
 static uint32_t HMAC_computation_basic()
