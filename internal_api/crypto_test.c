@@ -1578,7 +1578,8 @@ static uint32_t RSA_keypair_enc_dec()
 	    RSA_generate_keypair_enc_dec(2048, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA224, 10, 256, 256) ||
 	    RSA_generate_keypair_enc_dec(2048, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA256, 10, 256, 256) ||
 	    RSA_generate_keypair_enc_dec(2048, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA384, 10, 256, 256) ||
-	    RSA_generate_keypair_enc_dec(2048, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA512, 10, 256, 256))
+	    RSA_generate_keypair_enc_dec(2048, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA512, 10, 256, 256) ||
+	    RSA_generate_keypair_enc_dec(4096, TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA512, 10, 512, 512))
 		return 1;
 
 	PRI_OK("-");
