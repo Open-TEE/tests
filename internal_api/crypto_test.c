@@ -500,7 +500,11 @@ static int warp_sym_op(TEE_ObjectHandle key,
 	expectInfoM.keyInformation[0].keySize = 0;
 	expectInfoM.keyInformation[0].requiredKeyUsage = 0;
 	
-	TEE_GetObjectInfo1(key, &info);
+	ret = TEE_GetObjectInfo1(key, &info);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("TEE_GetObjectInfo1 Failed : 0x%x", ret);
+		goto err;
+	}
 
 	ret = TEE_AllocateOperation(&handle, alg, mode, info.maxObjectSize);
 	if (ret != TEE_SUCCESS) {
@@ -579,7 +583,8 @@ static int warp_sym_op(TEE_ObjectHandle key,
 	TEE_FreeOperation(handle);
 	return 0;
 err:
-	TEE_FreeOperation(handle);
+	if (handle)
+		TEE_FreeOperation(handle);
 	return 1;
 }
 
@@ -732,7 +737,11 @@ static int warp_asym_op(TEE_ObjectHandle key,
 	TEE_OperationHandle handle = (TEE_OperationHandle)NULL;
 	TEE_ObjectInfo info;
 
-	TEE_GetObjectInfo1(key, &info);
+	ret = TEE_GetObjectInfo1(key, &info);
+	if (ret != TEE_SUCCESS) {
+		PRI_FAIL("TEE_GetObjectInfo1 Failed : 0x%x", ret);
+		goto err;
+	}
 
 	ret = TEE_AllocateOperation(&handle, alg, mode, info.maxObjectSize);
 	if (ret != TEE_SUCCESS) {
@@ -795,7 +804,8 @@ static int warp_asym_op(TEE_ObjectHandle key,
 	return 0;
 
 err:
-	TEE_FreeOperation(handle);
+	if (handle)
+		TEE_FreeOperation(handle);
 	return 1;
 }
 
