@@ -50,13 +50,15 @@ libta2taTest_la_includes = \
 	../emulator/include/tee_logging.h \
 	internal_api/ta2ta_test.h \
 	ta2ta_conn_test_app_ctrl.h \
-	internal_api/print_functions.h
+	internal_api/print_functions.h \
+	panic_crash_ctl.h
 
 libta2taTest_la_SOURCES = ${libta2taTest_la_include} \
 	internal_api/ta2ta_test.c
 
 libta2taTest_la_CFLAGS = ${AM_CFLAGS} \
 	-iquote $(top_srcdir)/../emulator/include \
-	-iquote $(top_srcdir)/../TAs/ta2ta_conn_test_app
+	-iquote $(top_srcdir)/../TAs/ta2ta_conn_test_app \
+	-iquote $(top_srcdir)/../TAs/ta_panic_crash
 
 libta2taTest_la_LIBADD = ../emulator/libInternalApi.la

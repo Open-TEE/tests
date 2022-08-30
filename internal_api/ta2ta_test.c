@@ -17,6 +17,67 @@
 #include "tee_internal_api.h"
 #include "ta2ta_conn_test_app_ctrl.h"
 #include "print_functions.h"
+#include "panic_crash_ctl.h"
+
+static uint32_t do_crash_panic_test(uint32_t open_cmd,
+				    TEE_Result exp_open_ret,
+				    uint32_t invoke_cmd,
+				    TEE_Result exp_inv_ret)
+{
+	TEE_Result gp_rv, fn_rv = 1;
+	uint32_t paramTypes, retOrigin;
+	TEE_TASessionHandle session;
+	TEE_Param params[4] = {0};
+	TEEC_UUID panic_crash_ta_UUID = {0x12345678, 0x8765, 0x4321, {'P','A','N','I','C','R','A','S'}};
+
+	paramTypes = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INPUT, TEE_PARAM_TYPE_NONE,
+				     TEE_PARAM_TYPE_NONE, TEE_PARAM_TYPE_NONE);
+	params[0].value.a = open_cmd;
+
+	gp_rv = TEE_OpenTASession((TEE_UUID *)&panic_crash_ta_UUID,
+				  TEE_TIMEOUT_INFINITE,
+				  paramTypes, params,
+				  &session, &retOrigin);
+	if (gp_rv != exp_open_ret) {
+		PRI_FAIL("Opensession failed : 0x%x : expected 0x%x", gp_rv, exp_open_ret);
+		goto err_1;
+	}
+
+	gp_rv = TEE_InvokeTACommand(session, TEE_TIMEOUT_INFINITE,
+				    invoke_cmd,
+				    paramTypes, params,
+				    &retOrigin);
+	if (gp_rv != exp_inv_ret) {
+		PRI_FAIL("Invoke cmd failed : 0x%x : expected 0x%x", gp_rv, exp_inv_ret);
+		goto err_2;
+	}
+
+	fn_rv = 0;
+
+ err_2:
+	TEE_CloseTASession(session);
+ err_1:
+
+	if (fn_rv != 0) {
+		PRI_FAIL("Failed command: open_cmd 0x%x : exp_open_ret 0x%x ; invoke_cmd 0x%x : exp_inv_ret 0x%x", open_cmd, exp_open_ret, invoke_cmd, exp_inv_ret);
+	}
+
+	return fn_rv;
+}
+
+static uint32_t basic_panic_crash()
+{
+	if (do_crash_panic_test(CMD_NO_CRASH, TEE_SUCCESS, CMD_NO_CRASH, TEE_SUCCESS) ||
+	    do_crash_panic_test(CMD_PANIC, TEE_ERROR_COMMUNICATION, CMD_NO_CRASH, TEE_ERROR_GENERIC) ||
+	    do_crash_panic_test(CMD_SEG_FAULT, TEE_ERROR_COMMUNICATION, CMD_NO_CRASH, TEE_ERROR_GENERIC) ||
+	    do_crash_panic_test(CMD_NO_CRASH, TEEC_SUCCESS, CMD_PANIC, TEE_ERROR_COMMUNICATION) ||
+	    do_crash_panic_test(CMD_NO_CRASH, TEE_SUCCESS, CMD_SEG_FAULT, TEE_ERROR_COMMUNICATION)) {
+		return 1;
+	} else {
+		PRI_OK("-");
+		return 0;
+	}
+}
 
 static uint32_t basic_ta2ta_connection()
 {
@@ -143,6 +204,10 @@ uint32_t ta2ta_test(uint32_t loop_count)
 			break;
 		}
 
+		if (basic_panic_crash()) {
+			test_have_fail = 1;
+			break;
+		}
 	}
 
 	PRI_STR("----Test-has-reached-end----\n");
